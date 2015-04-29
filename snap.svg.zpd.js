@@ -260,6 +260,78 @@
         };
 
         /**
+         * Default implementation for determining pan constraints.
+         */
+        var _defaultDeterminePanConstraints = function(contentWidth, contentHeight, viewportWidth, viewportHeight) {
+            var dxMin = 0;
+            var dyMin = 0;
+            var dxMax = 0;
+            var dyMax = 0;
+
+            if (contentWidth < viewportWidth) {
+                // don't let content leave the viewport
+                dxMax = viewportWidth - contentWidth;
+            }
+            else {
+                dxMin = viewportWidth - contentWidth;
+            }
+
+            if (contentHeight < viewportHeight) {
+                // don't let content leave the viewport
+                dyMax = viewportHeight - contentHeight;
+            }
+            else {
+                dyMin = viewportHeight - contentHeight;
+            }
+
+            return {
+                dxMin: dxMin,
+                dxMax: dxMax,
+                dyMin: dyMin,
+                dyMax: dyMax
+            };
+        };
+
+        /**
+         * Constrain panning.
+         *
+         * FIXME not sure what implications zooming will have
+         */
+        var _constrainPan = function(matrix, zpdElement) {
+            var setting = zpdElement.options.constrainPan;
+            if (setting) {
+                var determineConstraints = _defaultDeterminePanConstraints;
+                var constraints = null;
+
+                if (typeof(setting) == 'function') {
+                    // custom function to determine constraints
+                    determineConstraints = setting;
+                }
+                else if (typeof(setting) == 'object') {
+                    // fixed constraints
+                    constraints = setting;
+                }
+
+                if (!constraints) {
+                    // determine constraints via function
+                    var gBB = zpdElement.element.node.getBoundingClientRect();
+                    var svgBB = zpdElement.data.root.getBoundingClientRect();
+                    constraints = determineConstraints(gBB.width, gBB.height, svgBB.width, svgBB.height);
+                }
+
+                // adjust matrix translation
+                matrix.e = Math.min(Math.max(matrix.e, constraints.dxMin), constraints.dxMax);
+                matrix.f = Math.min(Math.max(matrix.f, constraints.dyMin), constraints.dyMax);
+
+                return matrix;
+            }
+            else {
+                // unchanged matrix
+                return matrix;
+            }
+        };
+
+        /**
          * create some handler functions for our mouse actions
          * we will take advantace of closures to preserve some data
          */
@@ -331,7 +403,12 @@
                     // Pan mode
                     var p = _getEventPoint(event, zpdElement.data.svg).matrixTransform(zpdElement.data.stateTf);
 
-                    _setCTM(g, zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y));
+                    var matrix = zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y);
+                    if (zpdElement.options.constrainPan) {
+                        // apply pan constraints
+                        matrix = _constrainPan(matrix, zpdElement);
+                    }
+                    _setCTM(g, matrix);
 
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
