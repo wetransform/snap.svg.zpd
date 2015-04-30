@@ -316,7 +316,17 @@
                     // determine constraints via function
                     var gBB = zpdElement.element.node.getBoundingClientRect();
                     var svgBB = zpdElement.data.root.getBoundingClientRect();
-                    constraints = determineConstraints(gBB.width, gBB.height, svgBB.width, svgBB.height);
+
+                    // determine original offset of group from SVG element
+                    var currentCtm = zpdElement.element.node.getCTM();
+                    var offsetX = gBB.left - currentCtm.e - svgBB.left;
+                    var offsetY = gBB.top - currentCtm.f - svgBB.top;
+
+                    // apply offsets for content size (TODO configurable?)
+                    var contentWidth = gBB.width + 2 * offsetX;
+                    var contentHeight = gBB.height + 2 * offsetY;
+
+                    constraints = determineConstraints(contentWidth, contentHeight, svgBB.width, svgBB.height);
                 }
 
                 // adjust matrix translation
