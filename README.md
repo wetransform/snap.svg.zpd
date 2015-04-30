@@ -86,7 +86,7 @@ paper.zpd(function (err, paper) {
     
 #### onPan
 
-    function: callback function that is called when panning occurs, the parameters are the overall x- and y-translation
+* *function*: callback function that is called when panning occurs, the parameters are the overall x- and y-translation and an object with information on the content overlapping with the SVG viewport borders at `top`, `left`, `bottom` and `right`
 
 ### constrainPan
 

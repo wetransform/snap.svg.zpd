@@ -293,11 +293,24 @@
         };
 
         /**
-         * Constrain panning.
+         * Constrain panning if applicable, trigger an onPan callback if it was provided.
          *
-         * FIXME not sure what implications zooming will have
+         * FIXME not sure what implications zooming might have
          */
         var _constrainPan = function(matrix, zpdElement) {
+            var gBB = zpdElement.element.node.getBoundingClientRect();
+            var svgBB = zpdElement.data.root.getBoundingClientRect();
+
+            // determine original offset of group from SVG element
+            var currentCtm = zpdElement.element.node.getCTM();
+            var offsetX = gBB.left - currentCtm.e - svgBB.left;
+            var offsetY = gBB.top - currentCtm.f - svgBB.top;
+
+            // apply offsets for content size (TODO configurable?)
+            var contentWidth = gBB.width + 2 * offsetX;
+            var contentHeight = gBB.height + 2 * offsetY;
+
+            // apply constraints if applicable
             var setting = zpdElement.options.constrainPan;
             if (setting) {
                 var determineConstraints = _defaultDeterminePanConstraints;
@@ -314,31 +327,27 @@
 
                 if (!constraints) {
                     // determine constraints via function
-                    var gBB = zpdElement.element.node.getBoundingClientRect();
-                    var svgBB = zpdElement.data.root.getBoundingClientRect();
-
-                    // determine original offset of group from SVG element
-                    var currentCtm = zpdElement.element.node.getCTM();
-                    var offsetX = gBB.left - currentCtm.e - svgBB.left;
-                    var offsetY = gBB.top - currentCtm.f - svgBB.top;
-
-                    // apply offsets for content size (TODO configurable?)
-                    var contentWidth = gBB.width + 2 * offsetX;
-                    var contentHeight = gBB.height + 2 * offsetY;
-
                     constraints = determineConstraints(contentWidth, contentHeight, svgBB.width, svgBB.height);
                 }
 
                 // adjust matrix translation
                 matrix.e = Math.min(Math.max(matrix.e, constraints.dxMin), constraints.dxMax);
                 matrix.f = Math.min(Math.max(matrix.f, constraints.dyMin), constraints.dyMax);
+            }
 
-                return matrix;
+            // trigger onPan
+            if (zpdElement.options.onPan) {
+                var overlaps = {
+                    'left': matrix.e < 0,
+                    'top': matrix.f < 0,
+                    'right': contentWidth + matrix.e > svgBB.width,
+                    'bottom': contentHeight + matrix.f > svgBB.height
+                };
+
+                zpdElement.options.onPan(matrix.e, matrix.f, overlaps);
             }
-            else {
-                // unchanged matrix
-                return matrix;
-            }
+
+            return matrix;
         };
 
         /**
@@ -414,16 +423,7 @@
                     var p = _getEventPoint(event, zpdElement.data.svg).matrixTransform(zpdElement.data.stateTf);
 
                     var matrix = zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y);
-                    if (zpdElement.options.constrainPan) {
-                        // apply pan constraints
-                        matrix = _constrainPan(matrix, zpdElement);
-                    }
-                    _setCTM(g, matrix);
-
-                    if (zpdElement.options.onPan) {
-                        var ctm = g.getCTM();
-                        zpdElement.options.onPan(ctm.e, ctm.f);
-                    }
+                    _setCTM(g, _constrainPan(matrix, zpdElement));
 
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
