@@ -83,6 +83,10 @@ paper.zpd(function (err, paper) {
 #### zoomThreshold
 
     array: min and max zoom level threshold [min, max] (default null)
+    
+#### onPan
+
+    function: callback function that is called when panning occurs, the parameters are the overall x- and y-translation
 
 ### constrainPan
 

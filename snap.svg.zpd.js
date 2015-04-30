@@ -420,6 +420,11 @@
                     }
                     _setCTM(g, matrix);
 
+                    if (zpdElement.options.onPan) {
+                        var ctm = g.getCTM();
+                        zpdElement.options.onPan(ctm.e, ctm.f);
+                    }
+
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
                     // Drag mode
