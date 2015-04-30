@@ -333,6 +333,11 @@
 
                     _setCTM(g, zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y));
 
+                    if (zpdElement.options.onPan) {
+                        var ctm = g.getCTM();
+                        zpdElement.options.onPan(ctm.e, ctm.f);
+                    }
+
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
                     // Drag mode
