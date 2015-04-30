@@ -84,6 +84,13 @@ paper.zpd(function (err, paper) {
 
     array: min and max zoom level threshold [min, max] (default null)
 
+### constrainPan
+
+One of the following:
+* `true`: enable pan constraints with default behavior (default `false` - disables pan constraints)
+* *object*: fixed min and max translations in x- and y-direction (properties `dxMin`, `dxMax`, `dyMin` and `dyMax` should be set)
+* *function*: a custom function that takes the content width, the content height, the viewport with and the viewport height and returns an object as described above
+
 ### More
 
 #### paper.zpd('destroy')
