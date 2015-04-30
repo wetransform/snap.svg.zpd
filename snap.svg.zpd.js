@@ -255,6 +255,9 @@
             // store them globally for optional removal later on
             item.handlerFunctions = _getHandlerFunctions(item);
 
+            // trigger initial onPan (e.g. to provide overlaps)
+            _constrainPan(gNode.getCTM(), item);
+
             // return our element
             return item;
         };
