@@ -254,9 +254,6 @@
             // create some mouse event handlers for our item
             // store them globally for optional removal later on
             item.handlerFunctions = _getHandlerFunctions(item);
-            // Elements
-            // console.log(gNode.offsetWidth);
-            // console.log(gNode.offsetHeight);
 
             // trigger initial onPan (e.g. to provide overlaps)
             _constrainPan(gNode.getCTM(), item);
@@ -318,7 +315,6 @@
             var contentWidth = gBB.width + 2 * offsetX;
             var contentHeight = gBB.height + 2 * offsetY;
 
-            // console.log(contentWidth)
             // apply constraints if applicable
             var setting = zpdElement.options.constrainPan;
             if (setting) {
@@ -342,24 +338,28 @@
                 // adjust matrix translation
                 matrix.e = Math.min(Math.max(matrix.e, constraints.dxMin), constraints.dxMax);
                 matrix.f = Math.min(Math.max(matrix.f, constraints.dyMin), constraints.dyMax);
-                // console.log(matrix.e);
-                // console.log(matrix.f);
-
 
             }
 
+            _setCTM(zpdElement.element.node, matrix);
+
+            return {'svgBB': svgBB, 'width': contentWidth, 'height': contentHeight};
+        };
+
+        var _triggerPan = function(matrix, zpdElement) {
             // trigger onPan
+            constrainPan = _constrainPan(matrix, zpdElement);
+
             if (zpdElement.options.onPan) {
                 var overlaps = {
                     'left': matrix.e < 0,
                     'top': matrix.f < 0,
-                    'right': contentWidth + matrix.e > svgBB.width,
-                    'bottom': contentHeight + matrix.f > svgBB.height
+                    'right': constrainPan.width + matrix.e > constrainPan.svgBB.width,
+                    'bottom': constrainPan.height + matrix.f > constrainPan.svgBB.height
                 };
                 zpdElement.options.onPan(matrix.e, matrix.f, overlaps);
             }
 
-            return matrix;
         };
 
         /**
@@ -435,7 +435,7 @@
                     var p = _getEventPoint(event, zpdElement.data.svg).matrixTransform(zpdElement.data.stateTf);
 
                     var matrix = zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y);
-                    _setCTM(g, _constrainPan(matrix, zpdElement));
+                    _triggerPan(matrix, zpdElement);
 
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
@@ -676,6 +676,7 @@
 
                     return;
                 case situationState.sizes:
+                    _constrainPan(zpdElement.element.node.getCTM(), zpdElement);
                     return _allIn(zpdElement);
 
             }
@@ -808,15 +809,6 @@
                 currentCtm = nodes.getCTM(),
                 viewport = zpdElement.data.root.getBoundingClientRect(),
                 offset = nodes.getCTM();
-
-            console.log(zpd.width + currentCtm.e);
-
-            // var overlaps = {
-            //         'left': matrix.e < 0,
-            //         'top': matrix.f < 0,
-            //         'right': contentWidth + matrix.e > svgBB.width,
-            //         'bottom': contentHeight + matrix.f > svgBB.height
-            //     };
 
             return {
                 // 'left': viewport.width < (currentCtm.e), // future
