@@ -300,9 +300,11 @@
          *
          * FIXME not sure what implications zooming might have
          */
+
         var _constrainPan = function(matrix, zpdElement) {
             var gBB = zpdElement.element.node.getBoundingClientRect();
             var svgBB = zpdElement.data.root.getBoundingClientRect();
+
 
             // determine original offset of group from SVG element
             var currentCtm = zpdElement.element.node.getCTM();
@@ -336,21 +338,28 @@
                 // adjust matrix translation
                 matrix.e = Math.min(Math.max(matrix.e, constraints.dxMin), constraints.dxMax);
                 matrix.f = Math.min(Math.max(matrix.f, constraints.dyMin), constraints.dyMax);
+
             }
 
+            _setCTM(zpdElement.element.node, matrix);
+
+            return {'svgBB': svgBB, 'width': contentWidth, 'height': contentHeight};
+        };
+
+        var _triggerPan = function(matrix, zpdElement) {
             // trigger onPan
+            constrainPan = _constrainPan(matrix, zpdElement);
+
             if (zpdElement.options.onPan) {
                 var overlaps = {
                     'left': matrix.e < 0,
                     'top': matrix.f < 0,
-                    'right': contentWidth + matrix.e > svgBB.width,
-                    'bottom': contentHeight + matrix.f > svgBB.height
+                    'right': constrainPan.width + matrix.e > constrainPan.svgBB.width,
+                    'bottom': constrainPan.height + matrix.f > constrainPan.svgBB.height
                 };
-
                 zpdElement.options.onPan(matrix.e, matrix.f, overlaps);
             }
 
-            return matrix;
         };
 
         /**
@@ -426,7 +435,7 @@
                     var p = _getEventPoint(event, zpdElement.data.svg).matrixTransform(zpdElement.data.stateTf);
 
                     var matrix = zpdElement.data.stateTf.inverse().translate(p.x - zpdElement.data.stateOrigin.x, p.y - zpdElement.data.stateOrigin.y);
-                    _setCTM(g, _constrainPan(matrix, zpdElement));
+                    _triggerPan(matrix, zpdElement);
 
                 } else if (zpdElement.data.state == 'drag' && zpdElement.options.drag) {
 
@@ -562,7 +571,8 @@
                     destroy: 'destroy',
                     save: 'save',
                     origin: 'origin',
-                    callback: 'callback'
+                    callback: 'callback',
+                    sizes: 'sizes'
                 };
 
             var zpdElement = null;
@@ -665,6 +675,10 @@
                     }
 
                     return;
+                case situationState.sizes:
+                    _constrainPan(zpdElement.element.node.getCTM(), zpdElement);
+                    return _allIn(zpdElement);
+
             }
         };
 
@@ -785,6 +799,25 @@
             }
         };
 
+        /**
+         * Get canvas and viewport sizes
+         */ 
+        var _allIn = function(zpdElement){
+            // Canvas width and height
+            var nodes = zpdElement.element.node, 
+                zpd = nodes.getBoundingClientRect(),
+                currentCtm = nodes.getCTM(),
+                viewport = zpdElement.data.root.getBoundingClientRect(),
+                offset = nodes.getCTM();
+
+            return {
+                // 'left': viewport.width < (currentCtm.e), // future
+                'width': viewport.width < (zpd.width + currentCtm.e),
+                'height': viewport.height < (zpd.height + currentCtm.f)
+            };
+
+        };
+
         Paper.prototype.zpd = zpd;
         Paper.prototype.zoomTo = zoomTo;
         Paper.prototype.panTo = panTo;
@@ -793,10 +826,8 @@
         /** More Features to add (click event) help me if you can **/
         // Element.prototype.panToCenter = panToCenter; // arg (ease, interval, cb)
 
-
         /** UI for zpdr **/
 
     });
 
 })(Snap);
-
